@@ -1,0 +1,17 @@
+  tft.init();
+  tft.fillScreen(TFT_BLACK);
+  tft.setRotation(4);    //设置显示镜像 + 旋转90
+
+  showMyFonts(40, 50, "天气晴", TFT_WHITE);
+  tft.setCursor(10, 10, 1);
+  tft.setTextColor(TFT_YELLOW);
+  tft.setTextSize(2);
+  tft.println("ABC");
+
+  
+  tft.setCursor(10, 30, 1);
+  tft.setTextColor(TFT_YELLOW);
+  tft.setTextSize(2);
+  tft.println("ABC");
+  // tft.setSwapBytes(true);
+  // tft.pushImage(0,0,85,128,Ichika_Nagano);
