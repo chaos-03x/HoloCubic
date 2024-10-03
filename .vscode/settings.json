@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "cstdint": "cpp"
+        "cstdint": "cpp",
+        "stdlib.h": "c",
+        "alarm_clock_filledh": "cpp",
+        "lv_gif.c": "cpp"
     }
 }
