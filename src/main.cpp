@@ -2,28 +2,22 @@
 #include <TFT_eSPI.h>
 #include "lvgl.h"
 #include "lv_conf.h"
-#include "..\.pio\libdeps\esp32dev\lvgl\src\libs\gif\lv_gif.c"
-#include "alarm_clock_filled.c"
 
 
 // TFT_eSPI tft = TFT_eSPI();
 
-void demo_gif(){
-  //1. 声明图片
-  LV_IMG_DECLARE(alarm_clock_filled);
-
-  //2. 创建lv_gif对象
+void demo_obj(){
+  //1. get当前活跃屏幕
   lv_obj_t* screen = lv_scr_act();
-  lv_obj_t* gif = lv_gif_create(screen);
-  // lv_obj_t* gif = lv_gif_create(lv_scr_act());
 
-  //3. 给对象设置图片
-  lv_gif_set_src(gif, &alarm_clock_filled);
-
-  //4. 样式
-  lv_obj_align(gif, LV_ALIGN_CENTER, 0, -20);
-  // lv_obj_set_size(gif, 200, 200);
-
+  //2. 在当前屏幕上显示对象
+  lv_obj_t* obj = lv_obj_create(screen);
+  //位置、大小、颜色、样式
+  lv_obj_set_pos(obj,100,50); //设置位置
+  // lv_obj_set_width(obj,50);
+  // lv_obj_set_height(obj,80);
+  lv_obj_set_size(obj,100,150);
+  lv_obj_set_style_bg_color(obj,lv_palette_main(LV_PALETTE_PINK),0);
 }
 
 void setup() {
@@ -33,7 +27,8 @@ void setup() {
 
   lv_obj_set_style_bg_color(screen, lv_color_hex(0xFFFFFF), 0);
 
-  demo_gif();
+  // demo_gif();
+  demo_obj();
 
 }
 void loop() {
