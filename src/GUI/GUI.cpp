@@ -1,6 +1,7 @@
 #include "GUI.h"
 #include "WeatherAPI.h"
 #include "PicMap.h"
+#include "WIFIManager.h"
 
 GUI::GUI(TFT_eSPI* tft) : _tft(tft), _currentPage(0), _xValue(0), _yValue(0), _zValue(0) {}
 
@@ -19,7 +20,7 @@ void GUI::init() {
         { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE5
     };
 
-    draw();
+    drawPage0();  // 显示连接WiFi的页面
 }
 
 void GUI::draw() {
@@ -29,6 +30,22 @@ void GUI::draw() {
         drawParentPage(_currentPage);
     }
 }
+
+void GUI::drawPage0() {
+    _tft->fillScreen(TFT_BLACK);
+    _tft->setCursor(10, 10);
+    _tft->print("Connecting to WiFi...");
+    // 连接WiFi
+    ConnectWIFI();
+    if(isWIFIConnected()){
+        // 连接成功
+        draw();
+    }else{
+        // 连接失败
+        startHTTPServer();
+    }
+}
+
 
 void GUI::drawParentPage(int index) {
     // 根据 index 绘制父页面
@@ -157,6 +174,7 @@ void GUI::update() {
     draw();  // 重新绘制当前页面
 }
 
+/* 天气界面 */
 void GUI::drawPage1() {
     _tft->fillScreen(TFT_WHITE);
     _tft->setCursor(1, 1);
@@ -172,6 +190,7 @@ void GUI::drawPage1() {
     // getWeatherData(address, weather, temperature);
 }
 
+/* 音乐频谱 */
 void GUI::drawPage2() {
     _tft->fillScreen(TFT_WHITE);
     _tft->setCursor(1, 1);
@@ -182,6 +201,7 @@ void GUI::drawPage2() {
     // 绘制第二页的其他内容
 }
 
+/* 闹钟 */
 void GUI::drawPage3() {
     _tft->fillScreen(TFT_WHITE);
     _tft->setCursor(1, 1);
@@ -192,6 +212,7 @@ void GUI::drawPage3() {
     // 绘制第三页的其他内容
 }
 
+/* AI大模型 */
 void GUI::drawPage4() {
     _tft->fillScreen(TFT_WHITE);
     _tft->setCursor(1, 1);
@@ -202,10 +223,14 @@ void GUI::drawPage4() {
     // 绘制第四页的其他内容
 }
 
+/* 设置 */
 void GUI::drawPage5() {
-    _tft->fillScreen(TFT_BLACK);
-    _tft->setCursor(10, 10);
+    _tft->fillScreen(TFT_WHITE);
+    _tft->setCursor(1, 1);
     _tft->print("Welcome to Page 5");
+    _tft->setSwapBytes(true);
+    // _tft->pushImage(14, 14, 100, 190, rainfall_100_outline);
+    drawImage(rainfall_100_outline, 100, 100, 14, 14);
     // 绘制第五页的其他内容
 }
 

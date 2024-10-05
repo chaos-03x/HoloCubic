@@ -9,6 +9,7 @@ public:
     GUI(TFT_eSPI* tft);
     void init();
     void draw();
+    void drawPage0();
     void handleInput();
     void update();  // 更新页面内容
     void updateJoystick(int x, int y, int z);
@@ -30,9 +31,9 @@ private:
     int _currentSubPage;      // 当前子页面索引
     bool _inSubPage;          // 是否在子页面
 
-    int _xValue; 
-    int _yValue; 
-    int _zValue; 
+    int _xValue; // 摇杆X轴输入
+    int _yValue; // 摇杆Y轴输入
+    int _zValue; // 摇杆Z轴输入
 
     // 其他可能的辅助函数
     void drawPage(Page page);

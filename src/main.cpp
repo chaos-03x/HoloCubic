@@ -6,6 +6,10 @@
 TFT_eSPI tft = TFT_eSPI();
 GUI gui(&tft);
 
+// 记录上次检查WiFi的时间
+unsigned long previousMillis = 0; 
+const long interval = 1800000; // 30分钟，单位是毫秒
+
 // 定义摇杆引脚
 const int xPin = 34; // X轴
 const int yPin = 35; // Y轴
@@ -14,8 +18,6 @@ const int zPin = 32; // Z轴
 void setup() {
     Serial.begin(115200); // 初始化串口
     Serial.println("Initializing...");
-
-    ConnectWIFI(15000); // 连接WIFI
 
     gui.init(); // 初始化GUI
     pinMode(zPin,INPUT);
@@ -37,6 +39,19 @@ void loop() {
     // Serial.print(yValue);
     // Serial.print(" | Z: ");
     // Serial.println(zValue);
+
+    // 获取当前时间
+    unsigned long currentMillis = millis();
+
+    // 检查是否需要进行WiFi状态检测
+    if (currentMillis - previousMillis >= interval) {
+        previousMillis = currentMillis; // 每30分钟，判断一次WIFI状态
+
+        // 判断WiFi是否已连接
+        if (!isWIFIConnected()) {
+            gui.drawPage0(); // 未连接，进入Page0
+        }
+    }
 
     // 将值传递给GUI
     gui.updateJoystick(xValue, yValue, zValue);
