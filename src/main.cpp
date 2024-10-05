@@ -1,36 +1,45 @@
-#include <SPI.h> //导入库
+#include <SPI.h>
 #include <TFT_eSPI.h>
-#include "lvgl.h"
-#include "lv_conf.h"
+#include "GUI.h"
+#include "WIFIManager.h"
 
+TFT_eSPI tft = TFT_eSPI();
+GUI gui(&tft);
 
-// TFT_eSPI tft = TFT_eSPI();
-
-void demo_obj(){
-  //1. get当前活跃屏幕
-  lv_obj_t* screen = lv_scr_act();
-
-  //2. 在当前屏幕上显示对象
-  lv_obj_t* obj = lv_obj_create(screen);
-  //位置、大小、颜色、样式
-  lv_obj_set_pos(obj,100,50); //设置位置
-  // lv_obj_set_width(obj,50);
-  // lv_obj_set_height(obj,80);
-  lv_obj_set_size(obj,100,150);
-  lv_obj_set_style_bg_color(obj,lv_palette_main(LV_PALETTE_PINK),0);
-}
+// 定义摇杆引脚
+const int xPin = 34; // X轴
+const int yPin = 35; // Y轴
+const int zPin = 32; // Z轴
 
 void setup() {
-// put your setup code here, to run once:
-  //1. get当前活跃屏幕
-  lv_obj_t* screen = lv_scr_act();
+    Serial.begin(115200); // 初始化串口
+    Serial.println("Initializing...");
 
-  lv_obj_set_style_bg_color(screen, lv_color_hex(0xFFFFFF), 0);
+    ConnectWIFI(15000); // 连接WIFI
 
-  // demo_gif();
-  demo_obj();
-
+    gui.init(); // 初始化GUI
+    pinMode(zPin,INPUT);
+    
+    
+    Serial.println("Setup done");
 }
+
 void loop() {
-// put your main code here, to run repeatedly:
+    // 读取X和Y的模拟值
+    int xValue = analogRead(xPin);
+    int yValue = analogRead(yPin);
+    int zValue = digitalRead(zPin);
+
+    // 打印值到串口监视器（可选）
+    // Serial.print("X: ");
+    // Serial.print(xValue);
+    // Serial.print(" | Y: ");
+    // Serial.print(yValue);
+    // Serial.print(" | Z: ");
+    // Serial.println(zValue);
+
+    // 将值传递给GUI
+    gui.updateJoystick(xValue, yValue, zValue);
+    gui.handleInput(); // 处理输入
+    delay(50); // 延迟以便处理时间
 }
