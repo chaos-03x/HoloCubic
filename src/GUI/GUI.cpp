@@ -2,8 +2,11 @@
 #include "WeatherAPI.h"
 #include "PicMap.h"
 #include "WIFIManager.h"
+#include "FontManager.h"
+#include <TFT_eSPI.h>
 
-GUI::GUI(TFT_eSPI* tft) : _tft(tft), _currentPage(0), _xValue(0), _yValue(0), _zValue(0) {}
+GUI::GUI(TFT_eSPI* tft, WeatherAPI& weatherAPI) 
+    : _tft(tft), _weatherAPI(weatherAPI), _currentPage(0), _xValue(0), _yValue(0), _zValue(0) {}
 
 void GUI::init() {
     // 初始化TFT屏幕
@@ -19,7 +22,6 @@ void GUI::init() {
         { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE4
         { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE5
     };
-
     drawPage0();  // 显示连接WiFi的页面
 }
 
@@ -31,19 +33,49 @@ void GUI::draw() {
     }
 }
 
+void GUI::ConnectingGUI() {
+    ConnectWIFI(); // 连接WIFI
+    if(isWIFIConnected()){
+        Serial.print("Connect Succeed!");
+        _tft->print("Connect Succeed!");
+        int flag = 0;
+        for (int i = 0; i < 6; i++) {
+            _tft->setSwapBytes(true);
+            _tft->pushImage(14, 65, 100, 20, Loading[i]);
+            delay(100); 
+            if (i==5){i=0;}
+            if (flag == 30){break;}
+            flag++;
+        }
+        _tft->pushImage(14, 65, 100, 20, Loading[5]);
+        if (_weatherAPI.fetchWeatherData()) {
+            Serial.println("Weather data fetched successfully.");
+            draw(); // 确保在获取数据后调用 draw()
+        } else {
+            Serial.println("Failed to fetch weather data.");
+        }
+    }else{
+        Serial.print("Connect failed...");
+        _tft->print("Connect failed...");
+        startWifiAP();
+        // 进入另一个循环等待连接
+        while (true) {
+            if (isWIFIConnected()) {
+                closeWifiAP();
+                draw();
+                return; // 结束函数
+            }
+            delay(100); // 加入延迟以避免过于频繁的轮询
+        }
+    }
+}
+
 void GUI::drawPage0() {
     _tft->fillScreen(TFT_BLACK);
-    _tft->setCursor(10, 10);
-    _tft->print("Connecting to WiFi...");
-    // 连接WiFi
-    ConnectWIFI();
-    if(isWIFIConnected()){
-        // 连接成功
-        draw();
-    }else{
-        // 连接失败
-        startHTTPServer();
-    }
+    _tft->setCursor(30, 60);
+    _tft->print("GUI Starting......");
+    // 进入WIFI连接界面
+    ConnectingGUI();
 }
 
 
@@ -176,18 +208,54 @@ void GUI::update() {
 
 /* 天气界面 */
 void GUI::drawPage1() {
-    _tft->fillScreen(TFT_WHITE);
-    _tft->setCursor(1, 1);
-    _tft->print("Welcome to Page 1");
+    _tft->fillScreen(TFT_BLACK);
     _tft->setSwapBytes(true);
-    // _tft->pushImage(39, 39, 50, 50, rainfall_50_filled);
-    drawImage(rainfall_50_filled, 50, 50, 0, 0);
 
-    // 绘制第一页的其他内容
-    // String address;
-    // String weather;
-    // String temperature;
-    // getWeatherData(address, weather, temperature);
+        // 获取天气数据
+    String now_address = _weatherAPI.getAddress();
+    String now_wea = _weatherAPI.getWeather();
+    String now_high_tem = _weatherAPI.getHighTemperature();
+    String now_low_tem = _weatherAPI.getLowTemperature();
+    String now_rainfall = _weatherAPI.getRainfall();
+    String now_wind_direction = _weatherAPI.getWindDirection();
+    String now_hum = _weatherAPI.getHumidity();
+    int weatherCode = _weatherAPI.getWeatherCode();
+
+    _tft->pushImage(20, 0, 64, 64, weather[weatherCode], 0x0000);
+    Serial.println();
+    Serial.print("WeatherCode:");
+    Serial.println(weatherCode);
+    Serial.print("now_address:");
+    Serial.println(now_address);
+    Serial.print("now_wea:");
+    Serial.println(now_wea);
+    Serial.print("now_high_tem:");
+    Serial.println(now_high_tem);
+    Serial.print("now_low_tem:");
+    Serial.println(now_low_tem);
+    Serial.print("now_rainfall:");
+    Serial.println(now_rainfall);
+    Serial.print("now_wind_direction:");
+    Serial.println(now_wind_direction);
+    Serial.print("now_hum:");
+    Serial.println(now_hum);
+
+    showMyFonts(_tft, 90, 20, now_address.c_str(), TFT_WHITE);
+    showMyFonts(_tft,90, 40, now_wea.c_str(), TFT_WHITE);
+
+    _tft->pushImage(0, 65, 30, 30, temIcon);
+    _tft->pushImage(0, 95, 30, 30, humIcon);
+    _tft->pushImage(55, 65, 30, 30, rainIcon);
+    _tft->pushImage(55, 95, 30, 30, windIcon);
+
+    showtext(_tft,30,75,1,1,TFT_WHITE,TFT_BLACK,now_high_tem + "/" + now_low_tem);
+    showtext(_tft,85,75,1,1,TFT_WHITE,TFT_BLACK,now_rainfall +"mm");
+    showtext(_tft,30,105,1,1,TFT_WHITE,TFT_BLACK,now_hum+"%");
+    String now_wind = now_wind_direction + "风";
+    showMyFonts(_tft,85, 100, now_wind.c_str(), TFT_WHITE);
+
+    
+
 }
 
 /* 音乐频谱 */
@@ -196,8 +264,7 @@ void GUI::drawPage2() {
     _tft->setCursor(1, 1);
     _tft->print("Welcome to Page 2");
     _tft->setSwapBytes(true);
-    // _tft->pushImage(39, 39, 50, 50, rainfall_50_outline);
-    drawImage(rainfall_50_outline, 39, 39, 0, 0);
+    // _tft->pushImage(39, 39, 50, 50, rainfall_50_outline,0xF81F);
     // 绘制第二页的其他内容
 }
 
@@ -207,8 +274,7 @@ void GUI::drawPage3() {
     _tft->setCursor(1, 1);
     _tft->print("Welcome to Page 3");
     _tft->setSwapBytes(true);
-    // _tft->pushImage(14, 14, 100, 100, rainfall_100_filled);
-    drawImage(rainfall_100_filled, 100, 100, 14, 14);
+    // _tft->pushImage(14, 14, 100, 100, rainfall_100_filled,0xF81F);
     // 绘制第三页的其他内容
 }
 
@@ -218,8 +284,7 @@ void GUI::drawPage4() {
     _tft->setCursor(1, 1);
     _tft->print("Welcome to Page 4");
     _tft->setSwapBytes(true);
-    // _tft->pushImage(14, 14, 100, 190, rainfall_100_outline);
-    drawImage(rainfall_100_outline, 100, 100, 14, 14);
+    // _tft->pushImage(14, 14, 100, 190, rainfall_100_outline,0xF81F);
     // 绘制第四页的其他内容
 }
 
@@ -229,8 +294,7 @@ void GUI::drawPage5() {
     _tft->setCursor(1, 1);
     _tft->print("Welcome to Page 5");
     _tft->setSwapBytes(true);
-    // _tft->pushImage(14, 14, 100, 190, rainfall_100_outline);
-    drawImage(rainfall_100_outline, 100, 100, 14, 14);
+    // _tft->pushImage(14, 14, 100, 190, rainfall_100_outline,0xF81F);
     // 绘制第五页的其他内容
 }
 
@@ -249,3 +313,4 @@ void GUI::drawPage4_1(){
 void GUI::drawPage5_1(){
 
 }
+

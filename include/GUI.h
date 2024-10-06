@@ -3,23 +3,26 @@
 
 #include <TFT_eSPI.h>
 #include <vector>
+#include "WeatherAPI.h"
 
 class GUI {
 public:
-    GUI(TFT_eSPI* tft);
+    GUI(TFT_eSPI* tft, WeatherAPI& weatherAPI); 
     void init();
     void draw();
     void drawPage0();
     void handleInput();
     void update();  // 更新页面内容
     void updateJoystick(int x, int y, int z);
+    void ConnectingGUI();
 
     unsigned long lastPageChangeTime = 0; // 记录上次翻页的时间
     const unsigned long pageChangeDelay = 300; // 翻页延迟时间（毫秒）
 
 private:
     TFT_eSPI* _tft;
-
+    WeatherAPI& _weatherAPI;
+    
     enum class PageType { PARENT, CHILD };
     struct Page {
         PageType type;
@@ -49,6 +52,9 @@ private:
     void drawPage3_1();
     void drawPage4_1();
     void drawPage5_1();
+
 };
+
+
 
 #endif // GUI_H
