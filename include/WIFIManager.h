@@ -2,7 +2,10 @@
 #ifndef WIFIMANAGER_H
 #define WIFIMANAGER_H
 
+#include <Arduino.h> // Arduino库
 #include <WiFi.h> // WiFi库
+#include <WebServer.h>
+#include <Update.h> 
 
 // WiFi账号密码
 extern const char* ssid;
@@ -22,4 +25,8 @@ void startHTTPServer();
 void startWifiAP();
 // 关闭WIFI热点
 void closeWifiAP();
+
+// NTP对时
+void getTime();
+
 #endif // WIFIMANAGER_H

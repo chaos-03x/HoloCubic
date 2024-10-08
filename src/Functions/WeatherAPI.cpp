@@ -97,84 +97,47 @@ bool WeatherAPI::fetchWeatherData() {
 // 解析JSON数据
 bool WeatherAPI::parseWeatherData(const String& jsonAnswer) {
 
-JsonDocument doc;
+    JsonDocument doc;
 
-DeserializationError error = deserializeJson(doc, jsonAnswer);
+    DeserializationError error = deserializeJson(doc, jsonAnswer);
 
-JsonObject results_0 = doc["results"][0];
-// 提取位置相关信息
-JsonObject results_0_location = results_0["location"];
-now_address = results_0_location["name"].as<String>(); // "福州"
+    JsonObject results_0 = doc["results"][0];
+    // 提取位置相关信息
+    JsonObject results_0_location = results_0["location"];
+    now_address = results_0_location["name"].as<String>(); // "福州"
 
-// 提取天气相关信息
-JsonObject first_daily_item = results_0["daily"][0]; // 获取第一天的天气数据
+    // 提取天气相关信息
+    JsonObject first_daily_item = results_0["daily"][0]; // 获取第一天的天气数据
 
-now_weather = first_daily_item["text_day"].as<String>(); // "小雨"
-now_high_tem = first_daily_item["high"].as<String>(); // "28"
-now_low_tem = first_daily_item["low"].as<String>(); // "22"
-now_rainfall = first_daily_item["rainfall"].as<String>(); // "5.40"
-now_wind_direction = first_daily_item["wind_direction"].as<String>(); // "无持续风向"
-now_wind_scale = first_daily_item["wind_scale"].as<String>(); // "2"
-now_hum = first_daily_item["humidity"].as<String>(); // "85"
+    now_weather = first_daily_item["text_day"].as<String>(); // "小雨"
+    now_high_tem = first_daily_item["high"].as<String>(); // "28"
+    now_low_tem = first_daily_item["low"].as<String>(); // "22"
+    now_rainfall = first_daily_item["rainfall"].as<String>(); // "5.40"
+    now_wind_direction = first_daily_item["wind_direction"].as<String>(); // "无持续风向"
+    now_wind_scale = first_daily_item["wind_scale"].as<String>(); // "2"
+    now_hum = first_daily_item["humidity"].as<String>(); // "85"
 
-// 根据天气描述设置天气代码（优化）
-if (strstr(now_weather.c_str(), "晴")) {
-    weatherCode = 0;
-} else if (strstr(now_weather.c_str(), "多云")) {
-    weatherCode = 1;
-} else if (strstr(now_weather.c_str(), "阴")) {
-    weatherCode = 2;
-} else if (strstr(now_weather.c_str(), "阵雨")) {
-    weatherCode = 2;
-} else if (strstr(now_weather.c_str(), "小雨")) {
-    weatherCode = 3;
-} else if (strstr(now_weather.c_str(), "中雨")) {
-    weatherCode = 4;
-} else if (strstr(now_weather.c_str(), "大雨")) {
-    weatherCode = 5;
-} else if (strstr(now_weather.c_str(), "暴雨")) {
-    weatherCode = 5;
-}
+    // 根据天气描述设置天气代码（优化）
+    if (strstr(now_weather.c_str(), "晴")) {
+        weatherCode = 0;
+    } else if (strstr(now_weather.c_str(), "多云")) {
+        weatherCode = 1;
+    } else if (strstr(now_weather.c_str(), "阴")) {
+        weatherCode = 2;
+    } else if (strstr(now_weather.c_str(), "阵雨")) {
+        weatherCode = 2;
+    } else if (strstr(now_weather.c_str(), "小雨")) {
+        weatherCode = 3;
+    } else if (strstr(now_weather.c_str(), "中雨")) {
+        weatherCode = 4;
+    } else if (strstr(now_weather.c_str(), "大雨")) {
+        weatherCode = 5;
+    } else if (strstr(now_weather.c_str(), "暴雨")) {
+        weatherCode = 5;
+    }
 
-// 处理最后更新时间
-const char* results_0_last_update = results_0["last_update"]; // "2024-10-06T08:00:00+08:00"
-
-// const char* results_0_last_update = results_0["last_update"]; // "2024-10-06T08:00:00+08:00"
-
-    
-//     DynamicJsonDocument doc(1536);
-//     DeserializationError error = deserializeJson(doc, jsonAnswer);
-//     if (error) {
-//         Serial.print("Failed to parse JSON: ");
-//         Serial.println(error.f_str()); // 输出解析错误信息
-//         return false; // 返回false表示解析失败
-//     }
-
-//     JsonObject results_0 = doc["results"][0];
-//     JsonObject results_0_location = results_0["location"];
-//     now_address = results_0_location["name"].as<String>();
-
-//     const char* text_day = results_0["now"]["text"].as<const char*>();
-//     now_weather = text_day;
-
-//     now_high_tem = results_0["now"]["high"].as<String>();
-//     now_low_tem = results_0["now"]["low"].as<String>();
-//     now_rainfall = results_0["now"]["rainfall"].as<String>();
-//     now_wind_direction = results_0["now"]["wind_direction"].as<String>();
-//     now_wind_scale = results_0["now"]["wind_scale"].as<String>();
-//     now_hum = results_0["now"]["humidity"].as<String>();
-
-//     // 根据天气描述设置天气代码
-//     if (strstr(now_weather.c_str(), "晴")) {
-//         weatherCode = 0;
-//     } else if (strstr(now_weather.c_str(), "多云")) {
-//         weatherCode = 1;
-//     } else if (strstr(now_weather.c_str(), "阴")) {
-//         weatherCode = 2;
-//     } else if (strstr(now_weather.c_str(), "雨")) {
-//         weatherCode = 4;
-//     }
-    
+    // 处理最后更新时间
+    const char* results_0_last_update = results_0["last_update"]; // "2024-10-06T08:00:00+08:00"
     return true; // 返回true表示解析成功
 }
 

@@ -1,22 +1,13 @@
-// WiFiManager.cpp
-#include <Arduino.h> // Arduino库
-#include <WiFi.h>
-#include <WebServer.h>
 #include "WiFiManager.h"
-
+#include <Update.h> // 添加此行以支持OTA更新
 
 const char* ssid = "CMCC-awmy-2023";  // WiFi账号
 const char* password = "20232323";     // WiFi密码
 WebServer server(80); // 设置端口为80
 
-
 // 判断WIFI是否连接
-bool isWIFIConnected(){
-    if(WiFi.status() != WL_CONNECTED){
-        return false;
-    }else{
-        return true;
-    }
+bool isWIFIConnected() {
+    return WiFi.status() == WL_CONNECTED;
 }
 
 // 开启WIFI热点
@@ -31,10 +22,11 @@ void startWifiAP() {
     Serial.println(WiFi.softAPIP());
 }
 
-void closeWifiAP(){
+void closeWifiAP() {
     WiFi.softAPdisconnect(true); // true 表示断开所有连接
     Serial.println("Hotspot closed");
 }
+
 
 // 显示HTML页面，选择WiFi并连接
 void handleRoot() {
@@ -82,24 +74,6 @@ void handleRoot() {
     html += "    background-color: #45a049;"; // 悬停时按钮颜色
     html += "}";
     html += "</style>";
-    html += "<script>";
-    html += "function refreshWiFiList() {";
-    html += "    fetch('/getWiFiList')"; // 从服务器获取 WiFi 列表
-    html += "    .then(response => response.json())";
-    html += "    .then(data => {";
-    html += "        const wifiSelect = document.getElementById('wifiSelect');";
-    html += "        wifiSelect.innerHTML = '';"; // 清空当前选项
-    html += "        data.forEach(ssid => {"; 
-    html += "            const option = document.createElement('option');"; 
-    html += "            option.value = ssid;"; 
-    html += "            option.textContent = ssid;"; 
-    html += "            wifiSelect.appendChild(option);"; 
-    html += "        });";
-    html += "    });";
-    html += "}";
-    html += "setInterval(refreshWiFiList, 10000);"; // 每10秒刷新
-    html += "window.onload = refreshWiFiList;"; // 页面加载时刷新
-    html += "</script>";
     html += "</head><body>";
     html += "<h1>WiFi Configuration</h1>";
     html += "<div class='form-container'>";
@@ -111,12 +85,27 @@ void handleRoot() {
     html += "<form action='/restart' method='POST'>";
     html += "<input type='submit' value='Restart ESP32'>";
     html += "</form>";
+    html += "<form action='/serial/start' method='POST'>";
+    html += "<input type='submit' value='Start Receiving Serial Data'>";
+    html += "</form>";
+    html += "<form action='/serial/stop' method='POST'>";
+    html += "<input type='submit' value='Stop Receiving Serial Data'>";
+    html += "</form>";
+    html += "<form action='/serial' method='GET'>";
+    html += "<input type='submit' value='View Serial Data'>";
+    html += "</form>";
+    
+    // 添加固件上传的表单
+    html += "<form action='/upload' method='POST' enctype='multipart/form-data'>";
+    html += "Select Firmware File: <input type='file' name='firmware' required><br>";
+    html += "<input type='submit' value='Upload Firmware'>";
+    html += "</form>";
+    
     html += "</div>";
     html += "</body></html>";
     
     server.send(200, "text/html", html);
 }
-
 
 // 处理WiFi连接请求
 void handleConnect() {
@@ -147,14 +136,44 @@ void handleGetWiFiList() {
     server.send(200, "application/json", json); // 发送 JSON 响应
 }
 
+
+// 处理固件上传
+void handleUpload() {
+    HTTPUpload& upload = server.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+        String filename = upload.filename;
+        Serial.printf("Upload Start: %s\n", filename.c_str());
+        
+        // 开始更新
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+            Update.printError(Serial);
+        }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        // 写入数据
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+            Update.printError(Serial);
+        }
+    } else if (upload.status == UPLOAD_FILE_END) {
+        if (Update.end(true)) { // true表示提交更新
+            Serial.printf("Update Success: %u B\n", upload.totalSize);
+            server.send(200, "text/html", "<html><body><h1>Update Success!</h1></body></html>");
+        } else {
+            Update.printError(Serial);
+            server.send(500, "text/html", "<html><body><h1>Update Failed!</h1></body></html>");
+        }
+    }
+}
+
 // 开启HTTP服务器
 void startHTTPServer() {
     server.on("/", handleRoot);        // 主页路由
     server.on("/connect", handleConnect);  // 连接WiFi的路由
+    server.on("/upload", HTTP_POST, []() {
+        server.send(200, "text/html", "<html><body><h1>Uploading...</h1></body></html>");
+    }, handleUpload);  // 处理文件上传的路由
     server.on("/restart", handleRestart);  // 重启ESP32的路由
     server.on("/getWiFiList", handleGetWiFiList); // 获取可连接的WIFI列表
 
-    
     server.begin();  // 启动HTTP服务器并监听
     Serial.println("HTTP server started");
 }

@@ -5,82 +5,96 @@
 #include "FontManager.h"
 #include <TFT_eSPI.h>
 
-GUI::GUI(TFT_eSPI* tft, WeatherAPI& weatherAPI) 
+#define DEFAULT_FONT &FreeSans9pt7b  // 字体
+#define DEFAULT_TEXT_COLOR TFT_WHITE  // 字体颜色
+#define DEFAULT_BG_COLOR TFT_BLACK    // 背景色
+#define DEFAULT_FONT_SIZE 1           // 字体大小
+
+#define SCREEN_OFFSET 7       // 边界无法显示的区域
+#define SCREEN_WIDTH 128      // 屏幕宽度
+#define SCREEN_HEIGHT 128     // 屏幕高度
+#define DISPLAY_WIDTH (SCREEN_WIDTH - 2 * SCREEN_OFFSET)  // 有效显示区域宽度
+#define DISPLAY_HEIGHT (SCREEN_HEIGHT - 2 * SCREEN_OFFSET) // 有效显示区域高度
+
+// 统一文本显示函数
+void showUnifiedText(TFT_eSPI* tft, int x, int y, const char* text) {
+    tft->setTextColor(DEFAULT_TEXT_COLOR, DEFAULT_BG_COLOR);  // 设置文字颜色和背景
+    // tft->setFreeFont(DEFAULT_FONT);  // 使用统一字体
+    tft->setTextSize(DEFAULT_FONT_SIZE);  // 统一文字大小
+    tft->setCursor(x + SCREEN_OFFSET, y + SCREEN_OFFSET);  // 加入偏移量，避免文字超出边界
+    tft->print(text);  // 显示文字
+}
+
+GUI::GUI(TFT_eSPI* tft, WeatherAPI& weatherAPI)
     : _tft(tft), _weatherAPI(weatherAPI), _currentPage(0), _xValue(0), _yValue(0), _zValue(0) {}
 
 void GUI::init() {
     // 初始化TFT屏幕
     _tft->init();
-    _tft->setRotation(1);
-    _tft->fillScreen(TFT_BLACK);
+    _tft->setRotation(4);
+    Serial.println("GUI_init:Rotation:4");
+    _tft->fillScreen(DEFAULT_BG_COLOR);
 
     // 初始化页面
     _pages = {
-        { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE1
-        { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE2
-        { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE3
-        { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE4
-        { PageType::PARENT, { { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD }, { PageType::CHILD } } }, // PAGE5
+        { PageType::PARENT }, // PAGE1
+        { PageType::PARENT }, // PAGE2
+        { PageType::PARENT }, // PAGE3
+        { PageType::PARENT }, // PAGE4
+        { PageType::PARENT }  // PAGE5
     };
     drawPage0();  // 显示连接WiFi的页面
 }
 
 void GUI::draw() {
-    if (_inSubPage) {
-        drawChildPage(_currentSubPage);
-    } else {
-        drawParentPage(_currentPage);
-    }
+    drawParentPage(_currentPage);
 }
 
 void GUI::ConnectingGUI() {
     ConnectWIFI(); // 连接WIFI
     if(isWIFIConnected()){
-        Serial.print("Connect Succeed!");
-        _tft->print("Connect Succeed!");
+        _tft->fillScreen(TFT_WHITE);
         int flag = 0;
         for (int i = 0; i < 6; i++) {
             _tft->setSwapBytes(true);
-            _tft->pushImage(14, 65, 100, 20, Loading[i]);
+            _tft->pushImage(14, 45, 100, 20, Loading[i]);
             delay(100); 
             if (i==5){i=0;}
-            if (flag == 30){break;}
+            if (flag == 24){break;}
             flag++;
         }
-        _tft->pushImage(14, 65, 100, 20, Loading[5]);
+        _tft->pushImage(14, 45, 100, 20, Loading[5]);
         if (_weatherAPI.fetchWeatherData()) {
             Serial.println("Weather data fetched successfully.");
             draw(); // 确保在获取数据后调用 draw()
         } else {
             Serial.println("Failed to fetch weather data.");
         }
-    }else{
-        Serial.print("Connect failed...");
-        _tft->print("Connect failed...");
-        startWifiAP();
-        // 进入另一个循环等待连接
-        while (true) {
-            if (isWIFIConnected()) {
-                closeWifiAP();
-                draw();
-                return; // 结束函数
-            }
-            delay(100); // 加入延迟以避免过于频繁的轮询
+    } else {
+        for(int i=10; i>0; i--){
+            _tft->fillScreen(TFT_BLACK);
+            Serial.print("Connect failed...");
+            showUnifiedText(_tft, 10, 20, "Connect failed...");
+            showUnifiedText(_tft, 10, 35, "Please connect to");
+            showUnifiedText(_tft, 10, 50, "WiFi:ESP32 1234567   8");
+            showUnifiedText(_tft, 10, 68, "And access the fol  lowing IP address:");
+            showUnifiedText(_tft, 10, 88, WiFi.softAPIP().toString().c_str());
+            String countdown = String(i); // 将整数 i 转换为字符串
+           showUnifiedText(_tft, 62, 95, countdown.c_str()); // 显示倒计时
+
+            delay(1000); // 1秒
         }
+        draw();
     }
 }
 
 void GUI::drawPage0() {
-    _tft->fillScreen(TFT_BLACK);
-    _tft->setCursor(30, 60);
-    _tft->print("GUI Starting......");
-    // 进入WIFI连接界面
+    _tft->fillScreen(DEFAULT_BG_COLOR);  // 统一背景色
+    showUnifiedText(_tft, 10, 30, "GUI Starting...");
     ConnectingGUI();
 }
 
-
 void GUI::drawParentPage(int index) {
-    // 根据 index 绘制父页面
     switch (index) {
         case 0:
             drawPage1();
@@ -100,33 +114,6 @@ void GUI::drawParentPage(int index) {
     }
 }
 
-void GUI::drawChildPage(int index) {
-    // 根据子页面索引绘制子页面
-    _tft->fillScreen(TFT_BLACK);
-    _tft->setCursor(10, 10);
-    _tft->print("Welcome to SubPage of Parent Page ");
-    _tft->print(_currentPage + 1); // 显示当前父页面索引
-
-   // 根据子页面索引执行不同的功能
-    switch (_currentPage) {
-        case 0:
-            drawPage1_1();
-            break;
-        case 1:
-            drawPage2_1();
-            break;
-        case 2:
-            drawPage3_1();
-            break;
-        case 3:
-            drawPage4_1();
-            break;
-        case 4:
-            drawPage5_1();
-            break;
-    }
-}
-
 void GUI::updateJoystick(int x, int y, int z) {
     _xValue = x;
     _yValue = y;
@@ -136,82 +123,41 @@ void GUI::updateJoystick(int x, int y, int z) {
 void GUI::handleInput() {
     unsigned long currentTime = millis(); // 获取当前时间
 
-    // 检测Z轴点击事件
-    if (_zValue == 1) {
-        // 进入或返回父页面
-        if (_inSubPage) {
-            // 返回父页面
-            _inSubPage = false;
-            _currentSubPage = 0; // 重置子页面索引
-            draw(); // 绘制当前页面
-        } else {
-            // 进入子页面
-            if (!_pages[_currentPage].subPages.empty()) {
-                _inSubPage = true;
-                _currentSubPage = 0; // 默认进入第一个子页面
+    if (_xValue == 0) { // 向左
+        if (_currentPage > 0) {
+            if (currentTime - lastPageChangeTime >= pageChangeDelay) {
+                _currentPage--; // 向前翻父页面
+                lastPageChangeTime = currentTime; // 更新翻页时间
+                draw(); // 绘制当前页面
+            }
+        }
+    } else if (_xValue == 4095) { // 向右
+        if (_currentPage < _pages.size() - 1) {
+            if (currentTime - lastPageChangeTime >= pageChangeDelay) {
+                _currentPage++; // 向后翻父页面
+                lastPageChangeTime = currentTime; // 更新翻页时间
                 draw(); // 绘制当前页面
             }
         }
     }
 
-    // 检测X轴的值
-    if (_xValue == 0) { // 向左
-        if (_inSubPage) {
-            if (_currentSubPage > 0) {
-                if (currentTime - lastPageChangeTime >= pageChangeDelay) {
-                    _currentSubPage--; // 向前翻子页面
-                    lastPageChangeTime = currentTime; // 更新翻页时间
-                    draw(); // 绘制当前页面
-                }
-            }
-        } else {
-            if (_currentPage > 0) {
-                if (currentTime - lastPageChangeTime >= pageChangeDelay) {
-                    _currentPage--; // 向前翻父页面
-                    lastPageChangeTime = currentTime; // 更新翻页时间
-                    draw(); // 绘制当前页面
-                }
-            }
-        }
-    } else if (_xValue == 4095) { // 向右
-        if (_inSubPage) {
-            if (_currentSubPage < _pages[_currentPage].subPages.size() - 1) {
-                if (currentTime - lastPageChangeTime >= pageChangeDelay) {
-                    _currentSubPage++; // 向后翻子页面
-                    lastPageChangeTime = currentTime; // 更新翻页时间
-                    draw(); // 绘制当前页面
-                }
-            }
-        } else {
-            if (_currentPage < _pages.size() - 1) {
-                if (currentTime - lastPageChangeTime >= pageChangeDelay) {
-                    _currentPage++; // 向后翻父页面
-                    lastPageChangeTime = currentTime; // 更新翻页时间
-                    draw(); // 绘制当前页面
-                }
-            }
-        }
-    }
-
-    // 检测Y轴的值（如果需要处理Y轴翻页逻辑，可以在这里添加）
-    if (_yValue == 0) { // 向上
-        // 处理向上的逻辑（如果需要）
-    } else if (_yValue == 4095) { // 向下
-        // 处理向下的逻辑（如果需要）
+    if (_yValue == 0) {
+        _currentMode = (_currentMode + 1) % 4; // 循环切换3种模式
+        spectrumAnalyzer->setMode(_currentMode); // 设置新的频谱模式
+        Serial.print("Mode changed:");
+        Serial.println(_currentMode);
     }
 }
 
 void GUI::update() {
-    // 如果有需要更新的内容，可以在这里实现
     draw();  // 重新绘制当前页面
 }
 
-/* 天气界面 */
+/* 天气页 */
 void GUI::drawPage1() {
-    _tft->fillScreen(TFT_BLACK);
+    _tft->fillScreen(DEFAULT_BG_COLOR);
     _tft->setSwapBytes(true);
 
-        // 获取天气数据
     String now_address = _weatherAPI.getAddress();
     String now_wea = _weatherAPI.getWeather();
     String now_high_tem = _weatherAPI.getHighTemperature();
@@ -221,96 +167,48 @@ void GUI::drawPage1() {
     String now_hum = _weatherAPI.getHumidity();
     int weatherCode = _weatherAPI.getWeatherCode();
 
-    _tft->pushImage(20, 0, 64, 64, weather[weatherCode], 0x0000);
-    Serial.println();
-    Serial.print("WeatherCode:");
-    Serial.println(weatherCode);
-    Serial.print("now_address:");
-    Serial.println(now_address);
-    Serial.print("now_wea:");
-    Serial.println(now_wea);
-    Serial.print("now_high_tem:");
-    Serial.println(now_high_tem);
-    Serial.print("now_low_tem:");
-    Serial.println(now_low_tem);
-    Serial.print("now_rainfall:");
-    Serial.println(now_rainfall);
-    Serial.print("now_wind_direction:");
-    Serial.println(now_wind_direction);
-    Serial.print("now_hum:");
-    Serial.println(now_hum);
+    if(isWIFIConnected()){
+        _tft->pushImage(20, 0, 64, 64, weather[weatherCode], 0x0000);
 
-    showMyFonts(_tft, 90, 20, now_address.c_str(), TFT_WHITE);
-    showMyFonts(_tft,90, 40, now_wea.c_str(), TFT_WHITE);
+        showMyFonts(_tft, 90, 20, now_address.c_str(), TFT_WHITE); // 地址
+        showMyFonts(_tft, 90, 40, now_wea.c_str(), TFT_WHITE); // 天气
 
-    _tft->pushImage(0, 65, 30, 30, temIcon);
-    _tft->pushImage(0, 95, 30, 30, humIcon);
-    _tft->pushImage(55, 65, 30, 30, rainIcon);
-    _tft->pushImage(55, 95, 30, 30, windIcon);
+        _tft->pushImage(0, 65, 30, 30, temIcon); 
+        _tft->pushImage(0, 95, 30, 30, humIcon);
+        _tft->pushImage(55, 65, 30, 30, rainIcon);
+        // _tft->pushImage(55, 95, 30, 30, windIcon); // 风 优化
 
-    showtext(_tft,30,75,1,1,TFT_WHITE,TFT_BLACK,now_high_tem + "/" + now_low_tem);
-    showtext(_tft,85,75,1,1,TFT_WHITE,TFT_BLACK,now_rainfall +"mm");
-    showtext(_tft,30,105,1,1,TFT_WHITE,TFT_BLACK,now_hum+"%");
-    String now_wind = now_wind_direction + "风";
-    showMyFonts(_tft,85, 100, now_wind.c_str(), TFT_WHITE);
-
-    
+        showtext(_tft, 30, 75, 1, 1, TFT_WHITE, TFT_BLACK, now_high_tem + "/" + now_low_tem);
+        showtext(_tft, 85, 75, 1, 1, TFT_WHITE, TFT_BLACK, now_rainfall + "mm");
+        showtext(_tft, 30, 105, 1, 1, TFT_WHITE, TFT_BLACK, now_hum + "%");
+        // String now_wind = now_wind_direction + "风";
+        // showMyFonts(_tft, 85, 100, now_wind.c_str(), TFT_WHITE);
+    }else{
+        _tft->pushImage(14, 14, 100, 100, offline, 0xF81F);
+    }
 
 }
 
-/* 音乐频谱 */
 void GUI::drawPage2() {
-    _tft->fillScreen(TFT_WHITE);
-    _tft->setCursor(1, 1);
-    _tft->print("Welcome to Page 2");
     _tft->setSwapBytes(true);
-    // _tft->pushImage(39, 39, 50, 50, rainfall_50_outline,0xF81F);
-    // 绘制第二页的其他内容
+    if (spectrumAnalyzer == nullptr) {
+        spectrumAnalyzer = new MusicSpectrum(_tft);
+        spectrumAnalyzer->begin();
+    }
+    spectrumAnalyzer->update();
 }
 
-/* 闹钟 */
 void GUI::drawPage3() {
-    _tft->fillScreen(TFT_WHITE);
-    _tft->setCursor(1, 1);
-    _tft->print("Welcome to Page 3");
-    _tft->setSwapBytes(true);
-    // _tft->pushImage(14, 14, 100, 100, rainfall_100_filled,0xF81F);
-    // 绘制第三页的其他内容
+    _tft->fillScreen(DEFAULT_BG_COLOR);
+    showUnifiedText(_tft, 50, 50, "Welcome to Page 3");
 }
 
-/* AI大模型 */
 void GUI::drawPage4() {
-    _tft->fillScreen(TFT_WHITE);
-    _tft->setCursor(1, 1);
-    _tft->print("Welcome to Page 4");
-    _tft->setSwapBytes(true);
-    // _tft->pushImage(14, 14, 100, 190, rainfall_100_outline,0xF81F);
-    // 绘制第四页的其他内容
+    _tft->fillScreen(DEFAULT_BG_COLOR);
+    showUnifiedText(_tft, 50, 50, "Welcome to Page 4");
 }
 
-/* 设置 */
 void GUI::drawPage5() {
-    _tft->fillScreen(TFT_WHITE);
-    _tft->setCursor(1, 1);
-    _tft->print("Welcome to Page 5");
-    _tft->setSwapBytes(true);
-    // _tft->pushImage(14, 14, 100, 190, rainfall_100_outline,0xF81F);
-    // 绘制第五页的其他内容
+    _tft->fillScreen(DEFAULT_BG_COLOR);
+    showUnifiedText(_tft, 50, 50, "Welcome to Page 5");
 }
-
-void GUI::drawPage1_1(){
-
-}
-void GUI::drawPage2_1(){
-
-}
-void GUI::drawPage3_1(){
-
-}
-void GUI::drawPage4_1(){
-
-}
-void GUI::drawPage5_1(){
-
-}
-

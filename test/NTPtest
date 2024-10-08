@@ -1,36 +1,30 @@
-// #include <NTPClient.h>
-// // change next line to use with another board/shield
-// // #include <ESP8266WiFi.h>
-// #include <WiFi.h> // for WiFi shield
-// //#include <WiFi101.h> // for WiFi 101 shield or MKR1000
-// #include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <WiFi.h> // for WiFi shield
+#include <WiFiUdp.h>
 
-// const char *ssid     = "一加 Ace 2";
-// const char *password = "23568900";
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP,"ntp.aliyun.com");
 
-// WiFiUDP ntpUDP;
-// NTPClient timeClient(ntpUDP,"ntp.aliyun.com");
+void setup(){
+  Serial.begin(115200);
 
-// void setup(){
-//   Serial.begin(115200);
+  Serial.println("Connecting");
+  WiFi.begin(ssid, password);
 
-//   Serial.println("Connecting");
-//   WiFi.begin(ssid, password);
+  while ( WiFi.status() != WL_CONNECTED ) {
+    delay ( 500 );
+    Serial.print ( "." );
+  }
 
-//   while ( WiFi.status() != WL_CONNECTED ) {
-//     delay ( 500 );
-//     Serial.print ( "." );
-//   }
+  Serial.println("Connected to WIFI");
+  timeClient.begin();
+  timeClient.setTimeOffset(28800);  // +8区
+}
 
-//   Serial.println("Connected to WIFI");
-//   timeClient.begin();
-//   timeClient.setTimeOffset(28800);  // +8区
-// }
+void loop() {
+  timeClient.update();
 
-// void loop() {
-//   timeClient.update();
+  Serial.println(timeClient.getFormattedTime());
 
-//   Serial.println(timeClient.getFormattedTime());
-
-//   delay(1000);
-// }
+  delay(1000);
+}
