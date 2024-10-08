@@ -4,7 +4,7 @@ MusicSpectrum::MusicSpectrum(TFT_eSPI *tft) : _tft(tft), _fft(), _active(false),
 // 平滑参数
 #define SMOOTHING_FACTOR 0.7  // 平滑因子
 #define PEAK_DECAY 0.95  // 峰值衰减因子
-#define NOISE_THRESHOLD 60  // 根据实际情况调整，800是一个初始值
+#define NOISE_THRESHOLD 88  // 根据实际情况调整
 
 void MusicSpectrum::setMode(int mode) {
     _mode = mode;
@@ -81,7 +81,8 @@ void MusicSpectrum::drawSpectrum() {
             drawLinearSpectrum();            // 绘制线性频谱
             break;
         case 1:
-            drawSymmetricalSpectrum();       // 绘制对称频谱
+            // drawSymmetricalSpectrum();       // 绘制对称频谱
+            drawLinearSpectrum();            // 绘制线性频谱
             break;
         case 2:
             // void drawWavySpectrum();         // 绘制波浪频谱
@@ -89,7 +90,8 @@ void MusicSpectrum::drawSpectrum() {
             break;
         case 3:
             // void drawRadialSpectrum();       // 绘制放射频谱
-            drawSymmetricalSpectrum();       // 绘制对称频谱
+            // drawSymmetricalSpectrum();       // 绘制对称频谱
+            drawLinearSpectrum();            // 绘制线性频谱
         default:
             drawLinearSpectrum();
             break;
@@ -145,31 +147,63 @@ void MusicSpectrum::drawSymmetricalSpectrum() {
 
     for (int i = 0; i < numberOfBars; i++) {
         // 对数放缩频率分量，避免低频过大
-        float weightedValue = log10(vReal[i] + 1) * 15;  // 调整缩放参数
-        int barHeight = (int)(weightedValue);
+        float magnitude = log10(vReal[i] + 1) * 15;  // 调整缩放参数
 
-        // 确保 barHeight 在屏幕范围内
-        if (barHeight > _tft->height() / 2) {
-            barHeight = _tft->height() / 2;
-        } else if (barHeight < 0) {
-            barHeight = 0;  // 确保 barHeight 不小于0
+        // 平滑左侧和右侧频谱条的值
+        if (magnitude > bar_chart[i]) {
+            bar_chart[i] = magnitude;  // 左侧频谱条立即增长
+        } else {
+            bar_chart[i] = SMOOTHING_FACTOR * bar_chart[i] + (1.0 - SMOOTHING_FACTOR) * magnitude;  // 左侧频谱条逐渐下降
         }
+
+        if (magnitude > bar_chart_peaks[i]) {
+            bar_chart_peaks[i] = magnitude;  // 左侧频谱条的峰值
+        } else {
+            bar_chart_peaks[i] *= PEAK_DECAY;  // 左侧频谱条的峰值逐渐衰减
+        }
+
+        // 右侧频谱条使用相同的平滑逻辑
+        if (magnitude > bar_chart[numberOfBars + i]) {
+            bar_chart[numberOfBars + i] = magnitude;  // 右侧频谱条立即增长
+        } else {
+            bar_chart[numberOfBars + i] = SMOOTHING_FACTOR * bar_chart[numberOfBars + i] + (1.0 - SMOOTHING_FACTOR) * magnitude;  // 右侧频谱条逐渐下降
+        }
+
+        if (magnitude > bar_chart_peaks[numberOfBars + i]) {
+            bar_chart_peaks[numberOfBars + i] = magnitude;  // 右侧频谱条的峰值
+        } else {
+            bar_chart_peaks[numberOfBars + i] *= PEAK_DECAY;  // 右侧频谱条的峰值逐渐衰减
+        }
+
+        // 映射频谱条高度
+        int barHeightLeft = map(bar_chart[i], 0, 500, 0, _tft->height() / 2);
+        int peakHeightLeft = map(bar_chart_peaks[i], 0, 500, 0, _tft->height() / 2);
+
+        int barHeightRight = map(bar_chart[numberOfBars + i], 0, 500, 0, _tft->height() / 2);
+        int peakHeightRight = map(bar_chart_peaks[numberOfBars + i], 0, 500, 0, _tft->height() / 2);
 
         // 计算左侧频谱条的 x 坐标
         int xLeft = i * (barWidth + gap);
 
-        // 计算右侧频谱条的 x 坐标，去掉中间的 gap
+        // 计算右侧频谱条的 x 坐标
         int xRight = _tft->width() - (i + 1) * (barWidth + gap);
 
-        // 绘制左侧频谱条（上半部分和下半部分）
-        _tft->fillRect(xLeft, _tft->height() / 2 - barHeight, barWidth, barHeight, TFT_CYAN);  // 上半部分
-        _tft->fillRect(xLeft, _tft->height() / 2 + 1, barWidth, barHeight, TFT_CYAN);          // 下半部分
+        // 绘制左侧频谱条
+        _tft->fillRect(xLeft, _tft->height() / 2 - barHeightLeft, barWidth, barHeightLeft, TFT_CYAN);  // 上半部分
+        _tft->fillRect(xLeft, _tft->height() / 2 + 1, barWidth, barHeightLeft, TFT_CYAN);              // 下半部分
 
-        // 绘制右侧频谱条（上半部分和下半部分）
-        _tft->fillRect(xRight, _tft->height() / 2 - barHeight, barWidth, barHeight, TFT_CYAN);  // 上半部分
-        _tft->fillRect(xRight, _tft->height() / 2 + 1, barWidth, barHeight, TFT_CYAN);          // 下半部分
+        // 绘制左侧峰值标记
+        _tft->drawLine(xLeft, _tft->height() / 2 - peakHeightLeft, xLeft + barWidth, _tft->height() / 2 - peakHeightLeft, TFT_RED);
+
+        // 绘制右侧频谱条
+        _tft->fillRect(xRight, _tft->height() / 2 - barHeightRight, barWidth, barHeightRight, TFT_CYAN);  // 上半部分
+        _tft->fillRect(xRight, _tft->height() / 2 + 1, barWidth, barHeightRight, TFT_CYAN);               // 下半部分
+
+        // 绘制右侧峰值标记
+        _tft->drawLine(xRight, _tft->height() / 2 - peakHeightRight, xRight + barWidth, _tft->height() / 2 - peakHeightRight, TFT_RED);
     }
 }
+
 
 
 void MusicSpectrum::drawWavySpectrum() {
