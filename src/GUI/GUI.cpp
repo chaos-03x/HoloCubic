@@ -31,7 +31,8 @@ GUI::GUI(TFT_eSPI* tft, WeatherAPI& weatherAPI)
 void GUI::init() {
     // 初始化TFT屏幕
     _tft->init();
-    _tft->setRotation(4);
+    // _tft->setRotation(4); // 分光棱镜用
+    _tft->setRotation(0); // 正常显示
     Serial.println("GUI_init:Rotation:4");
     _tft->fillScreen(DEFAULT_BG_COLOR);
 
@@ -78,9 +79,9 @@ void GUI::ConnectingGUI() {
             showUnifiedText(_tft, 10, 35, "Please connect to");
             showUnifiedText(_tft, 10, 50, "WiFi:ESP32 1234567   8");
             showUnifiedText(_tft, 10, 68, "And access the fol  lowing IP address:");
-            showUnifiedText(_tft, 10, 88, WiFi.softAPIP().toString().c_str());
+            showUnifiedText(_tft, 10, 90, WiFi.softAPIP().toString().c_str());
             String countdown = String(i); // 将整数 i 转换为字符串
-           showUnifiedText(_tft, 62, 95, countdown.c_str()); // 显示倒计时
+           showUnifiedText(_tft, 62, 105, countdown.c_str()); // 显示倒计时
 
             delay(1000); // 1秒
         }
@@ -123,7 +124,7 @@ void GUI::updateJoystick(int x, int y, int z) {
 void GUI::handleInput() {
     unsigned long currentTime = millis(); // 获取当前时间
 
-    if (_xValue == 0) { // 向左
+    if (_xValue == 4095) { // 向左
         if (_currentPage > 0) {
             if (currentTime - lastPageChangeTime >= pageChangeDelay) {
                 _currentPage--; // 向前翻父页面
@@ -131,7 +132,7 @@ void GUI::handleInput() {
                 draw(); // 绘制当前页面
             }
         }
-    } else if (_xValue == 4095) { // 向右
+    } else if (_xValue == 0) { // 向右
         if (_currentPage < _pages.size() - 1) {
             if (currentTime - lastPageChangeTime >= pageChangeDelay) {
                 _currentPage++; // 向后翻父页面
@@ -141,7 +142,7 @@ void GUI::handleInput() {
         }
     }
 
-    if (_yValue == 0) {
+    if (_yValue == 0 && _currentPage == 2) {
         _currentMode = (_currentMode + 1) % 4; // 循环切换3种模式
         spectrumAnalyzer->setMode(_currentMode); // 设置新的频谱模式
         Serial.print("Mode changed:");
@@ -185,6 +186,7 @@ void GUI::drawPage1() {
         // showMyFonts(_tft, 85, 100, now_wind.c_str(), TFT_WHITE);
     }else{
         _tft->pushImage(14, 14, 100, 100, offline, 0xF81F);
+        Serial.println("Page1:push image");
     }
 
 }

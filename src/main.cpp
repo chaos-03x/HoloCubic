@@ -46,6 +46,7 @@ void loop() {
     // Serial.println();
 
 
+
     // 监听http server
     server.handleClient(); 
 
@@ -65,6 +66,7 @@ void loop() {
     if (gui.getCurrentPage() == 1) { 
         if (gui.spectrumAnalyzer != nullptr) {
             gui.spectrumAnalyzer->update();  // 持续更新频谱
+            delay(5); // 控制刷新频率
         }
     }
 

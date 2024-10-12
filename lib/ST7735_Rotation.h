@@ -131,6 +131,7 @@
       break;
 
       case 4:
+        
         // writedata(0x39 | TFT_MAD_MV); // 设置镜像旋转(再右旋90°)
         // writedata(0x39 | TFT_MAD_MV | TFT_MAD_MY); // 没变
         // writedata(0x39 | TFT_MAD_ML);  //一样
