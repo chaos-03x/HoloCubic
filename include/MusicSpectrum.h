@@ -21,11 +21,8 @@ private:
 
     void configureI2S();             // 配置I2S
     void readMicData();              // 读取麦克风数据
-    void drawSpectrum();             // 绘制频谱
+    void drawSpectrum();             // 选择频谱
     void drawLinearSpectrum();       // 绘制线性频谱
-    void drawSymmetricalSpectrum();  // 绘制对称频谱
-    void drawWavySpectrum();         // 绘制波浪频谱
-    void drawRadialSpectrum();       // 绘制放射频谱
 
     static const int samples = 512;  // FFT 样本数量
     double vReal[samples];           // 真实部分
@@ -39,6 +36,10 @@ private:
     // 新增：平滑因子和峰值衰减因子
     static constexpr double SMOOTHING_FACTOR = 0.7;  // 平滑因子
     static constexpr double PEAK_DECAY = 0.95;       // 峰值衰减因子
+
+    // 新增：上一次的频谱条、峰值标记高度
+    int last_bar_height[32] = {0};;  // 上一次的频谱条高度
+    int last_peak_height[32] = {0};  // 缓存每个峰值标记的高度
 
     static const int NumofCopy = samples * sizeof(double);  // 用于复制数据的大小
 };
